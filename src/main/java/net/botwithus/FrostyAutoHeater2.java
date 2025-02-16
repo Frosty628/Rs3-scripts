@@ -13,25 +13,59 @@ import net.botwithus.rs3.script.config.ScriptConfig;
 
 import java.util.Random;
 
-public class FrostyAutoHeater extends LoopingScript {
+public class FrostyAutoHeater2 extends LoopingScript {
+
 
     private BotState botState = BotState.IDLE;
+    private boolean useBurialForge = false; // Declare the useBurialForge field
     private boolean someBool = true;
     private Random random = new Random();
 
+    // Getter and Setter for useBurialForge
+    public boolean isUseBurialForge() {
+        return useBurialForge;
+    }
+
+    public void setUseBurialForge(boolean useBurialForge) {
+        this.useBurialForge = useBurialForge;
+    }
+    public enum BurialForgeOption {
+        NO("No"),
+        YES("Yes");
+
+        private final String label;
+
+        BurialForgeOption(String label) {
+            this.label = label;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        // Convert enum values to a list of strings
+        public static String[] getAllOptions() {
+            String[] options = new String[BurialForgeOption.values().length];
+            for (int i = 0; i < BurialForgeOption.values().length; i++) {
+                options[i] = BurialForgeOption.values()[i].getLabel();
+            }
+            return options;
+        }
+    }
+
+
+
     enum BotState {
-        //define your own states here
         IDLE,
         SKILLING,
         BANKING,
         Smithing,
         Heating,
-        //...
     }
 
-    public FrostyAutoHeater(String s, ScriptConfig scriptConfig, ScriptDefinition scriptDefinition) {
+    public FrostyAutoHeater2(String s, ScriptConfig scriptConfig, ScriptDefinition scriptDefinition) {
         super(s, scriptConfig, scriptDefinition);
-        this.sgc = new FrostyAutoHeaterGraphicsContext(getConsole(), this);
+        this.sgc = new FrostyAutoHeater2GraphicsContext(getConsole(), this);
     }
 
     @Override
@@ -85,36 +119,14 @@ public class FrostyAutoHeater extends LoopingScript {
         // Get the current time
         long currentTime = System.currentTimeMillis();
 
-        // If the animation is -1, track the time it has been -1
-        int currentAnimation = player.getAnimationId();
-        if (currentAnimation == -1) {
-            // If the animation is -1, check how long it has been in this state
-            if (lastAnimationTime == 0) {
-                lastAnimationTime = currentTime; // First time seeing -1, record the timestamp
-            } else if (currentTime - lastAnimationTime >= 300000) { // 5 minutes = 300000 ms
-                println("Player animation is -1 for 5 minutes. Switching to idle state.");
-                botState = BotState.IDLE; // Set the bot state to IDLE to stop skilling
-                return 0; // Immediate return, stopping execution (bot is now idle)
-            }
-        } else {
-            // If the animation is not -1, reset the lastAnimationTime
-            lastAnimationTime = 0;
-        }
-
-        // Randomize the time between 15s (15000ms) and 30s (30000ms)
-        long randomInterval = random.nextLong(15000, 30000); // Random interval between 15s and 30s
-
-        // If the random interval time has passed, toggle the states
-        if ((currentTime - lastActionTime) >= randomInterval) {
-            isSmithing = !isSmithing; // Toggle between smithing and heating
-            lastActionTime = currentTime; // Update last action timestamp
-        }
+        // Get the name for the anvil based on whether we're using Burial Forge
+        String anvilName = useBurialForge ? "Burial Anvil" : "Anvil";
 
         // If currently smithing and not in smithing animation, interact with anvil
-        if (isSmithing && currentAnimation != 32622) {  // Animation ID 32622 for smithing
-            SceneObject anvil = SceneObjectQuery.newQuery().name("Anvil").option("Smith").results().nearest();
+        if (isSmithing && player.getAnimationId() != 32622) {  // Animation ID 32622 for smithing
+            SceneObject anvil = SceneObjectQuery.newQuery().name(anvilName).option("Smith").results().nearest();
             if (anvil != null) {
-                println("Interacting with Anvil: " + anvil.interact("Smith"));
+                println("Interacting with " + anvilName + ": " + anvil.interact("Smith"));
                 return random.nextLong(1500, 3000);
             }
         }
@@ -133,6 +145,7 @@ public class FrostyAutoHeater extends LoopingScript {
         // Default return delay if no interaction occurs
         return random.nextLong(1500, 3000);
     }
+
 
     public BotState getBotState() {
         return botState;
