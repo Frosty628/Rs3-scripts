@@ -116,28 +116,33 @@ public class FrostyAutoHeater2 extends LoopingScript {
             return random.nextLong(250, 1500);
         }
 
-        // Get the current time
-        long currentTime = System.currentTimeMillis();
-
         // Get the name for the anvil based on whether we're using Burial Forge
         String anvilName = useBurialForge ? "Burial Anvil" : "Anvil";
 
-        // If currently smithing and not in smithing animation, interact with anvil
+        long currentTime = System.currentTimeMillis();
+
+// If currently smithing but more than 7s have passed, switch to heating
+        if (isSmithing && (currentTime - lastActionTime) > 7000) {
+            isSmithing = false; // Switch to heating mode
+        }
+
+// If currently smithing and not in smithing animation, interact with anvil
         if (isSmithing && player.getAnimationId() != 32622) {  // Animation ID 32622 for smithing
             SceneObject anvil = SceneObjectQuery.newQuery().name(anvilName).option("Smith").results().nearest();
             if (anvil != null) {
                 println("Interacting with " + anvilName + ": " + anvil.interact("Smith"));
+                lastActionTime = currentTime; // Reset timer when smithing starts
                 return random.nextLong(1500, 3000);
             }
         }
 
-        // Interact with the forge if we're in heating mode
+// Interact with the forge if we're in heating mode
         if (!isSmithing) {
             SceneObject forge = SceneObjectQuery.newQuery().name("Forge").option("Heat").results().nearest();
             if (forge != null) {
                 println("Interacting with Forge: " + forge.interact("Heat"));
                 lastActionTime = currentTime; // Reset timer after using the forge
-                isSmithing = true;  // Force the bot to switch back to smithing after 2 seconds
+                isSmithing = true;  // Switch back to smithing after heating
                 return random.nextLong(2000, 3000); // Interact with forge for 2 seconds
             }
         }
